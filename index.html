@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"> <!-- 设置文档字符集 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 设置视口，适配移动设备 -->
+    <title>纸牌接龙</title> <!-- 页面标题 -->
+    <style>
+        /* 设置页面的基本样式 */
+        body {
+            font-family: Arial, sans-serif; /* 设置字体 */
+            background: #2c3e50; /* 背景颜色 */
+            color: white; /* 字体颜色 */
+            display: flex; /* 使用flex布局 */
+            flex-direction: column; /* 纵向布局 */
+            align-items: center; /* 水平居中 */
+            justify-content: flex-start; /* 垂直分布 */
+            height: 100vh; /* 高度填满视口 */
+            padding: 20px; /* 内边距 */
+            width: 900px;           /* 设置固定宽度 */
+            margin: 0 auto;          /* 水平居中 */
+            min-width: 900px;       /* 最小宽度 */
+            /* height: 60vh; */
+        }
+
+        /* 游戏区域的网格布局 */
+        #game-area {
+            display: grid; /* 使用网格布局 */
+            grid-template-columns: repeat(7, 1fr); /* 七列等分 */
+            gap: 10px; /* 列间距 */
+            width: 700px; /* 宽度 */
+            margin-top: 20px; /* 顶部外边距 */
+        }
+
+        /* 列的样式和位置 */
+        .column {
+            position: relative; /* 相对定位 */
+            border: 2px dashed #666; /* 边框样式 */
+            border-radius: 10px; /* 圆角 */
+            min-height: 130px; /* 最小高度 */
+        }
+
+        /* 列号显示 */
+        .column::before {
+            content: attr(data-column); /* 显示列号 */
+            position: absolute; /* 绝对定位 */
+            top: -20px; /* 顶部位置 */
+            left: 0; /* 左侧位置 */
+            color: #fff; /* 字体颜色 */
+            font-size: 14px; /* 字体大小 */
+        }
+
+        /* 牌的基本样式 */
+        .card {
+            width: 80px; /* 宽度 */
+            height: 120px; /* 高度 */
+            background: white; /* 背景颜色 */
+            border-radius: 8px; /* 圆角 */
+            border: 1px solid #ccc; /* 边框 */
+            display: flex; /* 使用flex布局 */
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            font-size: 24px; /* 字体大小 */
+            color: black; /* 字体颜色 */
+            cursor: pointer; /* 鼠标指针 */
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3); /* 阴影 */
+            position: absolute; /* 绝对定位 */
+            transition: transform 0.2s; /* 动画效果 */
+            padding: 5px; /* 内边距 */
+            flex-direction: column; /* 纵向布局 */
+        }
+
+        /* 红色牌的样式 */
+        .card.red {
+            color: red; /* 字体颜色 */
+        }
+
+        /* 隐藏牌的样式 */
+        .card.hidden {
+            background: #3498db; /* 背景颜色 */
+            color: transparent; /* 字体透明 */
+        }
+
+        /* 隐藏牌的额外样式 */
+        .card.hidden::before {
+            content: ''; /* 空内容 */
+            position: absolute; /* 绝对定位 */
+            top: 5px; /* 顶部位置 */
+            left: 5px; /* 左侧位置 */
+            right: 5px; /* 右侧位置 */
+            bottom: 5px; /* 底部位置 */
+            background: #2980b9; /* 背景颜色 */
+            border-radius: 5px; /* 圆角 */
+        }
+
+        /* 牌的左上和右下角标记 */
+        .card .top-left,
+        .card .bottom-right {
+            position: absolute; /* 绝对定位 */
+            font-size: 12px; /* 字体大小 */
+        }
+
+        /* 左上角标记 */
+        .card .top-left {
+            top: 5px; /* 顶部位置 */
+            left: 5px; /* 左侧位置 */
+        }
+
+        /* 右下角标记 */
+        .card .bottom-right {
+            bottom: 5px; /* 底部位置 */
+            right: 5px; /* 右侧位置 */
+        }
+
+        /* 库存和废牌的样式 */
+        #stock, #waste, .foundation {
+            width: 80px; /* 宽度 */
+            height: 120px; /* 高度 */
+            border: 2px dashed #666; /* 边框样式 */
+            border-radius: 10px; /* 圆角 */
+            display: flex; /* 使用flex布局 */
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            margin: 10px; /* 外边距 */
+        }
+
+        /* 库存的样式 */
+        #stock {
+            cursor: pointer; /* 鼠标指针 */
+        }
+
+        /* 控制按钮的样式 */
+        #controls {
+            display: flex; /* 使用flex布局 */
+            justify-content: space-around; /* 水平分布 */
+            width: 600px; /* 宽度 */
+            margin-top: 20px; /* 顶部外边距 */
+        }
+
+        /* 按钮的样式 */
+        button {
+            padding: 10px 20px; /* 内边距 */
+            font-size: 16px; /* 字体大小 */
+            cursor: pointer; /* 鼠标指针 */
+            border: none; /* 无边框 */
+            border-radius: 5px; /* 圆角 */
+            background: #3498db; /* 背景颜色 */
+            color: white; /* 字体颜色 */
+            margin-top: 0px; /* 顶部外边距 */
+        }
+        /* 修改按钮样式 */
+        #restart-button {
+            margin: 10px auto 20px;
+            display: block;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #3498db;
+            color: white;
+        }
+        /* 重新开始按钮的位置 */
+        #restart-button {
+            align-self: flex-end; /* 自身对齐到末端 */
+        }
+        
+    </style>
+</head>
+<body>
+    <h1>纸牌接龙</h1> <!-- 页面标题 -->
+    <button id="restart-button" onclick="restartGame()">重新开始</button> <!-- 重新开始按钮 -->
+    <div id="controls">
+        <div id="stock">库存</div> <!-- 库存牌堆 -->
+        <div id="waste">废牌</div> <!-- 废牌堆 -->
+        <div class="foundation" data-foundation="0">基础 1</div> <!-- 基础牌堆1 -->
+        <div class="foundation" data-foundation="1">基础 2</div> <!-- 基础牌堆2 -->
+        <div class="foundation" data-foundation="2">基础 3</div> <!-- 基础牌堆3 -->
+        <div class="foundation" data-foundation="3">基础 4</div> <!-- 基础牌堆4 -->
+    </div>
+    <div id="game-area"></div> <!-- 游戏区域 -->
+    <script>
+        const gameArea = document.getElementById('game-area'); // 获取游戏区域元素
+        const stockElement = document.getElementById('stock'); // 获取库存元素
+        const wasteElement = document.getElementById('waste'); // 获取废牌元素
+        const foundations = document.querySelectorAll('.foundation'); // 获取基础牌堆元素
+
+        let stock = []; // 初始化库存牌堆
+        let waste = []; // 初始化废牌堆
+        let tableau = [[], [], [], [], [], [], []]; // 初始化七列牌堆
+        let foundationsCards = [[], [], [], []]; // 初始化基础牌堆
+        let draggedElement = null; // 被拖动的元素
+        let dragStartColumn = null; // 拖动开始的列
+        let dragStartIndex = null; // 拖动开始的索引
+
+        function initGame() {
+            const suits = ['♠', '♥', '♦', '♣']; // 花色数组
+            const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']; // 牌面值数组
+            
+            stock = []; // 初始化库存
+            suits.forEach(suit => {
+                values.forEach((value, index) => {
+                    stock.push({
+                        suit,
+                        value,
+                        numericValue: index + 1,
+                        isRed: suit === '♥' || suit === '♦', // 判断是否为红色牌
+                        visible: false // 初始不可见
+                    });
+                });
+            });
+
+            shuffle(stock); // 洗牌
+
+            tableau = [[], [], [], [], [], [], []]; // 初始化七列牌
+            for (let i = 0; i < 7; i++) {
+                for (let j = 0; j <= i; j++) {
+                    const card = stock.pop(); // 从库存中取牌
+                    if (j === i) {
+                        card.visible = true; // 只有最上面的牌是可见的
+                    }
+                    tableau[i].push(card); // 将牌放入对应列中
+                }
+            }
+
+            waste = []; // 初始化废牌堆
+            foundationsCards = [[], [], [], []]; // 初始化基础牌堆
+
+            renderGame(); // 渲染游戏
+        }
+
+        function shuffle(array) {
+            // 洗牌算法
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1)); // 随机索引
+                [array[i], array[j]] = [array[j], array[i]]; // 交换位置
+            }
+        }
+
+        function renderGame() {
+            gameArea.innerHTML = ''; // 清空游戏区域
+
+            tableau.forEach((column, colIndex) => {
+                const columnElement = document.createElement('div'); // 创建列元素
+                columnElement.className = 'column'; // 添加类名
+                columnElement.dataset.column = `列 ${colIndex + 1}`; // 设置列号
+                column.forEach((card, cardIndex) => {
+                    const cardElement = createCardElement(card, colIndex, cardIndex); // 创建牌元素
+                    cardElement.style.top = `${cardIndex * 30}px`; // 设置牌的垂直位置
+                    columnElement.appendChild(cardElement); // 添加牌到列
+                });
+                columnElement.ondragover = (e) => e.preventDefault(); // 允许拖放
+                columnElement.ondrop = (e) => drop(e, colIndex); // 处理放置事件
+                gameArea.appendChild(columnElement); // 添加列到游戏区域
+            });
+
+            renderStockAndWaste(); // 渲染库存和废牌
+            renderFoundations(); // 渲染基础牌堆
+        }
+
+        function createCardElement(card, colIndex, cardIndex) {
+            const cardElement = document.createElement('div'); // 创建牌元素
+            cardElement.className = `card ${card.isRed ? 'red' : ''} ${card.visible ? '' : 'hidden'}`; // 设置类名
+            if (card.visible) {
+                cardElement.innerHTML = `
+                    <div class="top-left">${card.value}${card.suit}</div> <!-- 左上角标记 -->
+                    <div>${card.suit}</div> <!-- 中心花色 -->
+                    <div class="bottom-right">${card.value}${card.suit}</div> <!-- 右下角标记 -->
+                `;
+            }
+            cardElement.dataset.column = colIndex; // 设置列索引
+            cardElement.dataset.index = cardIndex; // 设置牌索引
+
+            cardElement.draggable = card.visible; // 只有可见的牌可拖动
+            cardElement.ondragstart = (e) => dragStart(e, card, colIndex, cardIndex); // 拖动开始事件
+            cardElement.ondragover = (e) => e.preventDefault(); // 允许拖放
+            cardElement.ondrop = (e) => drop(e, colIndex); // 放置事件
+
+            return cardElement; // 返回牌元素
+        }
+
+        function renderStockAndWaste() {
+            stockElement.innerHTML = '库存'; // 设置库存文字
+            stockElement.onclick = drawCard; // 点击库存牌堆
+
+            wasteElement.innerHTML = '废牌'; // 设置废牌文字
+            if (waste.length > 0) {
+                const card = waste[waste.length - 1]; // 获取废牌堆顶部牌
+                const cardElement = createCardElement(card, -1, -1); // 创建牌元素
+                wasteElement.appendChild(cardElement); // 添加牌到废牌堆
+            }
+        }
+
+        function renderFoundations() {
+            foundations.forEach((foundation, index) => {
+                foundation.innerHTML = `基础 ${index + 1}`; // 设置基础牌堆文字
+                if (foundationsCards[index].length > 0) {
+                    const card = foundationsCards[index][foundationsCards[index].length - 1]; // 获取基础牌堆顶部牌
+                    const cardElement = createCardElement(card, -1, -1); // 创建牌元素
+                    foundation.appendChild(cardElement); // 添加牌到基础牌堆
+                }
+                foundation.ondragover = (e) => e.preventDefault(); // 允许拖放
+                foundation.ondrop = (e) => dropToFoundation(e, index); // 放置到基础牌堆
+            });
+        }
+
+        function drawCard() {
+            if (stock.length > 0) {
+                const card = stock.pop(); // 从库存中取牌
+                card.visible = true; // 设置牌可见
+                waste.push(card); // 添加到废牌堆
+                renderStockAndWaste(); // 更新库存和废牌
+            } else {
+                while (waste.length > 0) {
+                    const card = waste.pop(); // 从废牌堆取牌
+                    card.visible = false; // 设置牌不可见
+                    stock.push(card); // 放回库存
+                }
+                renderStockAndWaste(); // 更新库存和废牌
+            }
+        }
+
+        function dragStart(e, card, colIndex, cardIndex) {
+            draggedElement = e.target; // 被拖动的元素
+            dragStartColumn = colIndex; // 拖动开始的列
+            dragStartIndex = cardIndex; // 拖动开始的索引
+            e.dataTransfer.effectAllowed = 'move'; // 设置拖动效果
+        }
+
+        function drop(e, toCol) {
+            e.preventDefault();
+            if (draggedElement) {
+                const card = (dragStartColumn === -1) ? waste[waste.length - 1] : tableau[dragStartColumn][dragStartIndex]; // 获取被拖动的牌
+                if (tryMoveCard(card, dragStartColumn, dragStartIndex, toCol)) {
+                    renderGame(); // 成功移动后重新渲染游戏
+                } else {
+                    alert('非法移动！'); // 提示非法移动
+                }
+                draggedElement = null; // 清除拖动元素
+            }
+        }
+
+        function dropToFoundation(e, foundationIndex) {
+            e.preventDefault();
+            if (draggedElement) {
+                const card = (dragStartColumn === -1) ? waste[waste.length - 1] : tableau[dragStartColumn][dragStartIndex]; // 获取被拖动的牌
+                if (tryMoveToFoundation(card, dragStartColumn, dragStartIndex, foundationIndex)) {
+                    renderGame(); // 成功移动后重新渲染游戏
+                } else {
+                    alert('非法移动！'); // 提示非法移动
+                }
+                draggedElement = null; // 清除拖动元素
+            }
+        }
+
+        function tryMoveCard(card, fromCol, fromIndex, toCol) {
+            const targetColumn = tableau[toCol]; // 目标列
+            const targetCard = targetColumn[targetColumn.length - 1]; // 目标列顶部牌
+
+            // 检查是否可以移动到目标列
+            if (targetColumn.length === 0 || (targetCard.isRed !== card.isRed && targetCard.numericValue === card.numericValue + 1)) {
+                moveCardInTableau(fromCol, fromIndex, toCol); // 移动牌
+                return true;
+            }
+
+            return false; // 移动失败
+        }
+
+        function tryMoveToFoundation(card, fromCol, fromIndex, foundationIndex) {
+            const foundation = foundationsCards[foundationIndex]; // 基础牌堆
+            const lastCard = foundation[foundation.length - 1]; // 基础牌堆顶部牌
+
+            // 检查是否可以移动到基础牌堆
+            if ((!lastCard && card.numericValue === 1) || (lastCard && lastCard.suit === card.suit && lastCard.numericValue === card.numericValue - 1)) {
+                moveCardToFoundation(fromCol, fromIndex, foundationIndex); // 移动牌
+                return true;
+            }
+
+            return false; // 移动失败
+        }
+
+        function moveCardInTableau(fromCol, fromIndex, toCol) {
+            const movingCards = (fromCol === -1) ? [waste.pop()] : tableau[fromCol].splice(fromIndex); // 获取移动的牌
+            tableau[toCol] = tableau[toCol].concat(movingCards); // 添加到目标列
+            if (fromCol !== -1) revealCard(fromCol); // 显示下一个牌
+        }
+
+        function moveCardToFoundation(fromCol, fromIndex, foundationIndex) {
+            const card = (fromCol === -1) ? waste.pop() : tableau[fromCol].splice(fromIndex, 1)[0]; // 获取移动的牌
+            foundationsCards[foundationIndex].push(card); // 添加到基础牌堆
+            if (fromCol !== -1) revealCard(fromCol); // 显示下一个牌
+        }
+
+        function revealCard(colIndex) {
+            const column = tableau[colIndex];
+            if (column.length > 0) {
+                column[column.length - 1].visible = true; // 显示列中最上面的牌
+            }
+        }
+
+        function restartGame() {
+            initGame(); // 重新开始游戏
+        }
+
+        initGame(); // 初始化游戏
+    </script>
+</body>
+</html>
